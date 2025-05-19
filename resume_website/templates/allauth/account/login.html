@@ -1,0 +1,71 @@
+{% extends '../base.html' %}
+{% load crispy_forms_tags %}
+{% load socialaccount %}
+{% comment %} {% block content %}
+    <div class="container">
+        <form method='POST' enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form| crispy }}
+            <button class='btn btn-success'>Submit</button>
+        </form>
+    </div>
+    <a href="{% url 'users:register' %}">Sign up</a>
+    <a href="{% url 'users:forgotPassword' %}">Forgot password</a>
+
+{% endblock content %} {% endcomment %}
+
+{% block content %}
+
+<section class="section-conten padding-y" style="min-height:84vh">
+
+<!-- ============================ COMPONENT LOGIN   ================================= -->
+
+{% if request.GET.command == 'verification' %}
+
+<div class="container mx-auto alert alert-info text-center" role="alert" style="max-width: 1024px; margin-top:100px;">
+Thank you for registering with us. We have sent you a verification email to your email address [{{ request.GET.email }}]
+<br><br>
+Already verified? <a href="{% url 'login' %}">Login</a>
+</div>
+
+{% else %}
+
+	<div class="card mx-auto" style="max-width: 380px; margin-top:100px;">
+
+      <div class="card-body">
+      <h4 class="card-title mb-4">Sign in</h4>
+      <form  method="POST">
+        {% csrf_token %}
+          <div class="form-group">
+            {{form}}
+          </div> <!-- form-group// -->
+
+       
+          {% comment %} <div class="form-group">
+			<input type="password" class="form-control" placeholder="Password" name="password">}}
+          </div> <!-- form-group// --> {% endcomment %}
+
+          <div class="form-group">
+          	<a href="{% url 'users:forgotPassword' %}" class="float-right">Forgot password?</a>
+
+          </div> <!-- form-group form-check .// -->
+          <div class="form-group">
+              <button type="submit" class="btn btn-primary btn-block"> Login  </button>
+          </div> <!-- form-group// -->
+      </form>
+      </div> <!-- card-body.// -->
+      <a href="{% provider_login_url 'google' process='login'%}">Login with Google</a>
+      <a href="{% provider_login_url 'facebook' process='login'%}">Login with Facebook</a>
+      <a href="{% provider_login_url 'github' process='login'%}">Login with GitHub</a>
+      {{auth_error.exception}}
+
+
+    </div> <!-- card .// -->
+
+     <p class="text-center mt-4">Don't have an account? <a href="{% url 'users:register' %}">Sign up</a></p>
+     <br><br>
+<!-- ============================ COMPONENT LOGIN  END.// ================================= -->
+{% endif %}
+
+</section>
+{% endblock %}

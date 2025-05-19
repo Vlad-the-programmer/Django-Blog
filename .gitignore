@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+.resume_website/token.txt
+.resume_website/commands.txt
+.resume_website/reqs.txt
+.resume_website_restapi/reqs.txt
