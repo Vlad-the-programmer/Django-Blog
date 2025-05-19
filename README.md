@@ -69,13 +69,13 @@ Filters	django_filters
 Misc	django_countries, Jazzmin
 
 
-![alt text](https://github.com/Vlad-the-programmer/PORTFOLIO/blob/main/resume_website/screenshots/image1.png?raw=true)
+![image1](https://github.com/Vlad-the-programmer/Django-Blog/blob/main/resume_website/Screenshots/image1.png?raw=true)
 
-![alt text](https://github.com/Vlad-the-programmer/PORTFOLIO/blob/main/resume_website/screenshots/image2.png?raw=true)
+![image2](https://github.com/Vlad-the-programmer/Django-Blog/blob/main/resume_website/screenshots/image2.png?raw=true)
 
-![alt text](https://github.com/Vlad-the-programmer/PORTFOLIO/blob/main/resume_website/screenshots/image3.png?raw=true)
+![image3](https://github.com/Vlad-the-programmer/Django-Blog/blob/main/resume_website/screenshots/image3.png?raw=true)
 
-![alt text](https://github.com/Vlad-the-programmer/PORTFOLIO/blob/main/resume_website/screenshots/image4.png?raw=true)
+![image4](https://github.com/Vlad-the-programmer/Django-Blog/blob/main/resume_website/screenshots/image4.png?raw=true)
 
 # (resume_website_restapi):
 
