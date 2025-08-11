@@ -1,15 +1,25 @@
 
 # DRF
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter as router
 
 from django.conf import settings
 from django.conf.urls.static  import static
 from django.contrib import admin
 from django.urls import path, include
 
-# from users import views as custom_views
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView
+)
 
 urlpatterns = [
+    # OpenAPI Schema
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
     path('admin/',      admin.site.urls),
     path('posts/',      include('posts.urls',    namespace='posts')),
     path('users/',      include('users.urls',    namespace='users')),
@@ -17,7 +27,6 @@ urlpatterns = [
     path('categories/', include('category.urls', namespace='category')),
     # path('auth/',     include('dj_rest_auth.urls')),
     path('accounts/',   include('allauth.urls')),
-    
 ]
 
 # # Router urls

@@ -33,7 +33,7 @@ class Profile(AbstractUser):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     gender = models.CharField(_('Gender'),
                               max_length=10,
-                              choices=Gender.choices,
+                              choices=Gender,
                               default=_('Male'),
                               null=True)
     country = CountryField(blank_label=_('(select country)'), default='')

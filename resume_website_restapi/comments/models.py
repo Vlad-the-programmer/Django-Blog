@@ -4,8 +4,12 @@ from django.core.validators import MaxLengthValidator
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from comments.managers import ActiveCommentsManager
+from common.models import CommonModel
 
-class Comment(models.Model):
+
+class Comment(CommonModel):
+    active_comments = ActiveCommentsManager()
     slug = models.SlugField(unique=True, 
                             max_length=100,
                             blank=True, 
@@ -51,7 +55,7 @@ class Comment(models.Model):
             url = self.image.url
         except:
             url = ''
-        return 
+        return ""
         
         
     def get_absolute_url(self):

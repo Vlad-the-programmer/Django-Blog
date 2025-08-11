@@ -5,12 +5,17 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import validate_slug, MaxLengthValidator
 
+from common.models import CommonModel
+from posts.managers import PublishedPostsManager
+
+
 class STATUS(models.TextChoices):
     DRAFT = "draft", _("Draft")
     PUBLISH = "publish", _("Publish")
     
 
-class Post(models.Model):
+class Post(CommonModel):
+    published = PublishedPostsManager()
     # id = models.UUIDField(default=uuid.uuid4, unique=True,
     #                       primary_key=True, editable=False)
     title = models.CharField(unique=True,
@@ -27,7 +32,6 @@ class Post(models.Model):
                               blank=True, 
                               default="default.jpg", 
                               upload_to='posts')
-    active = models.BooleanField(verbose_name=_('Active'), default=True)
     slug = models.SlugField(max_length=100,
                             unique=True,
                             blank=True,
@@ -40,8 +44,6 @@ class Post(models.Model):
                                     )
                                 ]
                             )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField('Tags', blank=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL,
                              related_name='profile',
@@ -53,7 +55,7 @@ class Post(models.Model):
                                  null=True)
     status = models.CharField(_('Status'),
                               max_length=10,
-                              choices=STATUS.choices,
+                              choices=STATUS,
                               default=STATUS.DRAFT,
                               blank=True, null=True)
   
@@ -64,7 +66,7 @@ class Post(models.Model):
     class Meta:
         verbose_name = _("Post")
         verbose_name_plural = _("Posts")
-        ordering = ['-created_at']
+        ordering = ['-date_created']
 
     @property
     def imageURL(self):
@@ -72,14 +74,14 @@ class Post(models.Model):
             url = self.image.url
         except:
             url = ''
-        return 
+        return ""
         
     def get_absolute_url(self):
         return reverse('posts:post-detail', kwargs={'slug': self.slug})
     
 
         
-class Tags(models.Model):
+class Tags(CommonModel):
     # id = models.UUIDField(default=uuid.uuid4, unique=True,
     #                       primary_key=True, editable=False)
     title = models.CharField(max_length=200,
@@ -90,10 +92,16 @@ class Tags(models.Model):
                                     )
                                 ]
                              )
-    created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return self.title
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'date_created': self.date_created.isoformat() if self.date_created else None
+        }
     
     class Meta:
         verbose_name = _("Tag")

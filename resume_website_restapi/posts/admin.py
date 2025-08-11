@@ -4,7 +4,7 @@ from posts.models import Post, Tags
 
 
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('title', 'slug', 'status','created_at')
+    list_display = ('title', 'slug', 'status','date_created')
     list_filter = ("status",)
     search_fields = ['title', 'content']
     prepopulated_fields = {'slug': ('title',)}

@@ -1,7 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-class Category(models.Model):
+from common.models import CommonModel
+
+
+class Category(CommonModel):
     # id = models.UUIDField(default=uuid.uuid4, unique=True,
     #                       primary_key=True, editable=False)
     title = models.CharField(max_length=100, blank=True, null=True)

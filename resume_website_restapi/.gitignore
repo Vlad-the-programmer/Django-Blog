@@ -1,0 +1,4 @@
+env
+reqs.txt
+poetry.lock
+.env

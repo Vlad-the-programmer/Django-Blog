@@ -14,11 +14,11 @@ class PostsFilter(filters.FilterSet):
     
     
     release_date = filters.DateTimeFilter(
-        field_name='created_at', lookup_expr='created_at')
+        field_name='date_created', lookup_expr='date_created')
     release_data_year__gt = filters.DateTimeFilter(
-        field_name='created_at', lookup_expr='created_at__gt')
+        field_name='date_created', lookup_expr='date_created__gt')
     release_data_year__lt = filters.DateTimeFilter(
-        field_name='created_at', lookup_expr='created_at__lt')
+        field_name='date_created', lookup_expr='date_created__lt')
     
     class Meta:
         model = Post

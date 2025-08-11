@@ -59,12 +59,14 @@ INSTALLED_APPS = [
     'dj_rest_auth',
     'django_filters',
     'django_countries',
-    
+    'drf_spectacular',
+
     # Custom apps
     'posts.apps.PostsConfig',
     'users.apps.UsersConfig',
     'comments.apps.CommentsConfig',
     'category.apps.CategoryConfig',
+    'common.apps.CommonConfig',
 ]
 
 MIDDLEWARE = [
@@ -75,6 +77,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'resume_website_restapi.urls'
@@ -128,12 +131,19 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
     # Permissions
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     # Authentication
-       'DEFAULT_AUTHENTICATION_CLASSES': [
+   'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         # 'rest_framework.authentication.SessionAuthentication',
@@ -154,6 +164,20 @@ REST_USE_JWT = True
 JWT_AUTH_COOKIE = 'blog-auth'
 JWT_AUTH_REFRESH_COOKIE = 'blog-refresh-token'
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your API',
+    'DESCRIPTION': 'API Documentation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # Optional: If using JWT
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+        }
+    },
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
@@ -239,11 +263,9 @@ from django.urls import reverse_lazy
 LOGIN_URL = reverse_lazy('users:login')
 LOGOUT_REDIRECT_URL = reverse_lazy('users:login')
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
-ACCOUNT_USERNAME_REQUIRED = False
-
+ACCOUNT_SIGNUP_FIELDS = ['email*']
+ACCOUNT_LOGIN_METHODS = ["email"]
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 # SocialAccount Auth
 SOCIALACCOUNT_PROVIDERS = {
