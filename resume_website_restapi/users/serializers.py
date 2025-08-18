@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -13,14 +12,15 @@ from rest_framework.validators import UniqueValidator
 from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 
 # Local
-from base_utils import emails_handler
 from .models import Gender
 from .exceptions import NotOwner, UserAlreadyExists, InvalidPasswordFormat, WeakPasswordError
+
 
 # Constants
 PASSWORD_MIN_LENGTH = 8
 USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9_]+$')
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+
 
 class PasswordField(serializers.CharField):
     def __init__(self, **kwargs):
@@ -233,6 +233,21 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         ]
     )
     country = CountryField(required=False)
+    gender = serializers.ChoiceField(
+        choices=Gender,
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+        error_messages={
+            'invalid_choice': _('Please select a valid gender.')
+        }
+    )
+    featured_image = serializers.ImageField(
+        allow_empty_file=False,
+        required=False,
+        use_url=True,
+        help_text=_('Profile picture for the user')
+    )
 
     class Meta:
         model = Profile
@@ -278,118 +293,32 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             raise WeakPasswordError(str(e))
         
         return attrs
-    
-    def create(self, validated_data):
+
+    def validate_email(self, value):
+        """Validate email format."""
+        if not EMAIL_REGEX.match(value):
+            raise serializers.ValidationError(_('Enter a valid email address.'))
+        return value.lower()
+
+    def validate_username(self, value):
+        """Validate username format."""
+        if not USERNAME_REGEX.match(value):
+            raise serializers.ValidationError(
+                _('Username can only contain letters, numbers, and underscores.')
+            )
+        return value.lower()
+
+    def create(self, validated_data) -> Profile:
         """Create a new user with the given validated data."""
         # Remove password2 as it's not needed for user creation
         validated_data.pop('password2', None)
         
         try:
             user = Profile._default_manager.create_user(**validated_data)
-            
-            # Send verification email
-            if user:
-                mail_subject = _('Please activate your account!')
-                emails_handler.send_verification_email(
-                    request=self.context.get('request'),
-                    user=user,
-                    template_email='account_verification_email.html',
-                    mail_subject=mail_subject,
-                )
-            
             return user
-            
         except Exception as e:
             # Log the error here if you have logging set up
             raise serializers.ValidationError({
                 'non_field_errors': [_('Failed to create user. Please try again.')]
             })
 
-
-class PasswordResetSerializer(serializers.Serializer):
-    """
-    Serializer for initiating password reset.
-    Sends a password reset email to the provided email address.
-    """
-    email = serializers.EmailField(
-        required=True,
-        help_text=_('The email address associated with your account')
-    )
-    
-    def validate_email(self, value):
-        """Validate that the email exists in the system."""
-        try:
-            return Profile.objects.get(email__iexact=value.lower())
-        except Profile.DoesNotExist:
-            # Don't reveal that the email doesn't exist for security reasons
-            return None
-    
-    def validate(self, attrs):
-        """Validate and process the password reset request."""
-        user = attrs.get('email')
-        
-        # If user is None, it means validate_email didn't find the user
-        # but we'll still return success for security reasons
-        if user and user.is_active:
-            mail_subject = _('Reset Your Password')
-            emails_handler.send_verification_email(
-                request=self.context.get('request'),
-                user=user,
-                template_email='reset_password_email.html',
-                mail_subject=mail_subject,
-            )
-        
-        # Always return the same response regardless of whether the email exists
-        return {
-            'detail': _(
-                'If an account exists with this email, you will receive a password reset link.'
-            )
-        }
-
-
-class ChangePasswordSerializer(serializers.ModelSerializer):
-    """
-    Serializer for changing a user's password.
-    Requires the current password and the new password (with confirmation).
-    """
-    old_password = serializers.CharField(
-        write_only=True,
-        required=True,
-        help_text=_('Your current password')
-    )
-    new_password = PasswordField(
-        required=True,
-        help_text=_('Your new password')
-    )
-    new_password2 = PasswordField(
-        required=True,
-        help_text=_('Confirm your new password')
-    )
-
-    class Meta:
-        model = Profile
-        fields = (
-            'old_password',
-            'new_password',
-            'new_password2',
-        )
-        extra_kwargs = {
-            'old_password': {'write_only': True},
-            'new_password': {'write_only': True},
-            'new_password2': {'write_only': True},
-        }
-
-    def validate_old_password(self, value):
-        """Verify the old password is correct."""
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError(_('Your old password was entered incorrectly.'))
-        return value
-
-    
-    
-    def validate(self, attrs):
-        if attrs.get('password', '') != attrs.get('password2', ''):
-            raise ValueError(_("The two Passwords must be equal!"))
-        
-        return attrs

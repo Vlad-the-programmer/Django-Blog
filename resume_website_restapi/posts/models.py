@@ -6,18 +6,19 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import validate_slug, MaxLengthValidator
 
 from common.models import CommonModel
-from posts.managers import PublishedPostsManager
+from .managers import PublishedPostsManager
+from .choices import STATUS as STATUS_CHOICES
 
-
-class STATUS(models.TextChoices):
-    DRAFT = "draft", _("Draft")
-    PUBLISH = "publish", _("Publish")
-    
 
 class Post(CommonModel):
+    # Set the default manager
+    objects = models.Manager()
+    
+    # Custom manager for published posts
     published = PublishedPostsManager()
+    
     # id = models.UUIDField(default=uuid.uuid4, unique=True,
-    #                       primary_key=True, editable=False)
+    #                     primary_key=True, editable=False)
     title = models.CharField(unique=True,
                              max_length=100,
                              validators=[
@@ -55,8 +56,8 @@ class Post(CommonModel):
                                  null=True)
     status = models.CharField(_('Status'),
                               max_length=10,
-                              choices=STATUS,
-                              default=STATUS.DRAFT,
+                              choices=STATUS_CHOICES.choices,
+                              default=STATUS_CHOICES.DRAFT,
                               blank=True, null=True)
   
     

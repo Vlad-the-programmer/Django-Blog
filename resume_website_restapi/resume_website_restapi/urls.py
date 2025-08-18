@@ -1,39 +1,71 @@
-
-# DRF
-from rest_framework.routers import DefaultRouter as router
-
 from django.conf import settings
-from django.conf.urls.static  import static
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
+# API Schema
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
-    SpectacularRedocView
+    SpectacularRedocView,
 )
 
-urlpatterns = [
-    # OpenAPI Schema
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    # Optional UI:
-    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+# Import settings
+from django.conf import settings
 
-    path('admin/',      admin.site.urls),
-    path('posts/',      include('posts.urls',    namespace='posts')),
-    path('users/',      include('users.urls',    namespace='users')),
-    path('comments/',   include('comments.urls', namespace='comments')),
-    path('categories/', include('category.urls', namespace='category')),
-    # path('auth/',     include('dj_rest_auth.urls')),
-    path('accounts/',   include('allauth.urls')),
+urlpatterns = [
+    # Admin
+    path('admin/', admin.site.urls),
+    
+    # API Schema - JSON
+    path('api/schema/', SpectacularAPIView.as_view(api_version='v1'), name='schema'),
+    
+    # Swagger UI
+    path('api/schema/swagger-ui/', 
+        SpectacularSwaggerView.as_view(
+            url_name='schema',
+            url='/api/schema/',
+        ), 
+        name='swagger-ui'
+    ),
+    
+    # ReDoc UI
+    path('api/schema/redoc/', 
+        SpectacularRedocView.as_view(
+            url_name='schema',
+            url='/api/schema/',
+        ), 
+        name='redoc'
+    ),
+    
+    # API Endpoints
+    path('api/auth/', include('users.urls')),
+    path('api/posts/', include('posts.urls')),
+    path('api/comments/', include('comments.urls')),
+    path('api/category/', include('category.urls', namespace='category')),
 ]
 
-# # Router urls
-# urlpatterns += router.urls
-
+# Serve media and static files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL,
-                          document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL,
-                          document_root=settings.STATIC_ROOT)
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    
+    # Serve static files
+    urlpatterns += staticfiles_urlpatterns()
+    
+    # Serve media files
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
+    # Add a redirect from the root URL to the Swagger UI
+    urlpatterns += [
+        path('', RedirectView.as_view(url='/api/schema/swagger-ui/', permanent=False)),
+    ]
+    
+    # Debug toolbar
+    try:
+        import debug_toolbar
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ImportError:
+        pass

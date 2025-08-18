@@ -60,7 +60,7 @@ class PostApiTestCase(APITestCase):
         # Create a post
         self.test_post_create()
         # Kwargs for the urls
-        kwargs = {'post_slug': Post.objects.first().slug}
+        kwargs = {'post_slug': Post.published.first().slug}
         self.post_update_delete = reverse('posts:post-update-delete',
                                           kwargs=kwargs)
         self.post_retrieve = reverse('posts:post-retrieve', 
@@ -81,7 +81,7 @@ class PostApiTestCase(APITestCase):
     def test_posts_list(self):
         response = self.client.get(self.post_list)
         
-        self.assertEqual(Post.objects.all().count(), 1)
+        self.assertEqual(Post.published.all().count(), 1)
         
         
     def test_post_update(self):

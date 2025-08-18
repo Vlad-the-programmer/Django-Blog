@@ -1,0 +1,60 @@
+{% extends "rest_framework/base.html" %}
+
+{% block title %}{% if name %}{{ name }} - {% endif %}API - Swagger UI{% endblock %}
+
+{% block style %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui.css" />
+  <style>
+    .swagger-ui .topbar {
+      display: none;
+    }
+    .swagger-ui .info .title small pre {
+      background: transparent;
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+  <a class='navbar-brand' rel="nofollow" href='{{ request.scheme }}://{{ request.get_host }}'>
+    Blog API
+  </a>
+{% endblock %}
+
+{% block content %}
+  <div id="swagger-ui"></div>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: "{{ schema_url }}",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "BaseLayout",
+        requestInterceptor: function(request) {
+          // Add any request interceptor logic here
+          return request;
+        },
+        onComplete: function() {
+          // Add any onComplete logic here
+        }
+      });
+      
+      window.ui = ui;
+    };
+  </script>
+{% endblock %}

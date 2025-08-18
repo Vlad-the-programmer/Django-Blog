@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
 
@@ -12,6 +11,7 @@ from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 # Local
 from .models import Comment
 from posts.models import Post
+from posts.choices import STATUS as POST_STATUS
 from users.serializers import UserSerializer
 
 # Constants
@@ -37,7 +37,7 @@ class CurrentUserDefault(serializers.CurrentUserDefault):
                 'date_created': '2023-01-01T12:00:00Z',
                 'updated': '2023-01-01T12:00:00Z',
                 'comment_image': 'http://example.com/media/comments/image.jpg',
-                'is_approved': True
+                'is_active': True
             },
             response_only=True
         )
@@ -66,9 +66,9 @@ class CommentSerializer(serializers.ModelSerializer):
             'date_created',
             'updated',
             'comment_image',
-            'is_approved',
+            'is_active',
         ]
-        read_only_fields = ['id', 'date_created', 'updated', 'is_approved']
+        read_only_fields = ['id', 'date_created', 'updated', 'is_active']
     
 @extend_schema_serializer(
     examples=[
@@ -127,9 +127,9 @@ class CommentCRUDSerializer(serializers.ModelSerializer):
             'updated',
             'image',
             'comment_image',
-            'is_approved',
+            'is_active',
         ]
-        read_only_fields = ['id', 'date_created', 'updated', 'author', 'is_approved']
+        read_only_fields = ['id', 'date_created', 'updated', 'author', 'is_active']
         extra_kwargs = {
             'title': {
                 'max_length': MAX_TITLE_LENGTH,
@@ -209,7 +209,13 @@ class CommentCRUDSerializer(serializers.ModelSerializer):
             })
             
         try:
+            # Use the default manager to find the post
             post = Post.objects.get(slug=post_slug)
+            
+            # If the post is not published, raise an error
+            if not (post.status == POST_STATUS.PUBLISH and post.is_active):
+                raise Post.DoesNotExist("Post is not published")
+                
         except Post.DoesNotExist:
             raise serializers.ValidationError({
                 'post_slug': _('No post found with the given slug.')
@@ -232,7 +238,7 @@ class CommentCRUDSerializer(serializers.ModelSerializer):
         Update an existing comment instance.
         """
         # Only allow updating specific fields
-        editable_fields = ['title', 'content', 'image', 'is_approved']
+        editable_fields = ['title', 'content', 'image', 'is_active']
         for field in editable_fields:
             if field in validated_data:
                 setattr(instance, field, validated_data[field])

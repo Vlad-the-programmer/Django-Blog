@@ -32,7 +32,7 @@ cssselect = "^1.2.0"
 defusedxml = "^0.7.1"
 distlib = "^0.3.4"
 distro = "^1.7.0"
-dj-rest-auth = "^7.0.1"
+dj-rest-auth = {extras = ["with-social"], version = "^7.0.1"}
 Django = "^5.2.5"
 django-allauth = "^65.10.0"
 django-countries = "^7.6.1"

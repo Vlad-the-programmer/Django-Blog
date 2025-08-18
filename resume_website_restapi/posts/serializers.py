@@ -7,6 +7,7 @@ from comments.serializers import CommentSerializer
 from category.serializers import CategorySerializer
 from category.models import Category
 from .models import Post, Tags
+from .choices import STATUS as STATUS_CHOICES
 
 
 class TagsSerializer(serializers.ModelSerializer):
@@ -86,7 +87,7 @@ class PostCRUDSerializer(serializers.ModelSerializer):
             'image',
             'slug',
             'date_created',
-            'updated',
+            'date_updated',
             'status',
             'author',
             'tags',
@@ -95,7 +96,7 @@ class PostCRUDSerializer(serializers.ModelSerializer):
             'add_category',
             'comments',
         )
-        read_only_fields = ['id', 'date_created', 'updated']
+        read_only_fields = ['id', 'date_created', 'date_updated']
 
     def create(self, validated_data):
         request = self.context.get('request')
@@ -116,7 +117,13 @@ class PostCRUDSerializer(serializers.ModelSerializer):
             validated_data['author'] = request.user
 
         try:
-            post = Post._default_manager.create(**validated_data)
+            # Create the post using the model's default manager
+            post = Post.objects.create(**validated_data)
+            
+            # If the post is being created as published, ensure it's in the published queryset
+            if post.status == STATUS_CHOICES.PUBLISH:
+                post = Post.published.get(pk=post.pk)
+                
         except Exception as e:
             raise serializers.ValidationError(
                 _("Error creating post: {}").format(str(e))
@@ -182,8 +189,15 @@ class PostCRUDSerializer(serializers.ModelSerializer):
         Exclude current instance when updating.
         """
         instance = getattr(self, 'instance', None)
-        if instance and Post.objects.exclude(pk=instance.pk).filter(title=value).exists():
+        
+        # Use the default manager to check for title uniqueness
+        # This ensures we check against all posts, not just published ones
+        queryset = Post.objects.filter(title=value)
+        
+        if instance:
+            queryset = queryset.exclude(pk=instance.pk)
+            
+        if queryset.exists():
             raise serializers.ValidationError(_("A post with this title already exists."))
-        elif not instance and Post.objects.filter(title=value).exists():
-            raise serializers.ValidationError(_("A post with this title already exists."))
+            
         return value

@@ -9,6 +9,9 @@ from common.models import CommonModel
 
 
 class Comment(CommonModel):
+    # Default manager
+    objects = models.Manager()
+    # Custom manager for active comments
     active_comments = ActiveCommentsManager()
     slug = models.SlugField(unique=True, 
                             max_length=100,
