@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Email Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome to {{ current_site.name }}!</h2>
+    <p>Hello {{ user.get_username }},</p>
+    <p>Thank you for registering. Please confirm your email address by clicking the button below:</p>
+    <p>
+        <a href="{{ activate_url }}" class="button">Confirm Email Address</a>
+    </p>
+    <p>Or copy and paste this link into your browser:<br>
+    {{ activate_url }}</p>
+    <div class="footer">
+        <p>If you didn't create an account, please ignore this email.</p>
+        <p>Thanks,<br>The {{ current_site.name }} Team</p>
+    </div>
+</body>
+</html>

@@ -188,7 +188,7 @@ class UserSerializer(serializers.ModelSerializer):
                 'last_name': 'Doe',
                 'password': 'SecurePass123!',
                 'password2': 'SecurePass123!',
-                'gender': 'M',
+                'gender': 'male',
                 'country': 'US'
             },
             request_only=True
@@ -322,3 +322,5 @@ class UserRegisterSerializer(serializers.ModelSerializer):
                 'non_field_errors': [_('Failed to create user. Please try again.')]
             })
 
+    def save(self, request=None, **kwargs):  # Add request parameter with default None
+        return super().save(**kwargs)

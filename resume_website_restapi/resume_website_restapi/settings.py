@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import warnings
 from datetime import timedelta
+
 from dotenv import load_dotenv
 
 # Suppress pkg_resources deprecation warning
@@ -169,7 +170,6 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 3,
 }
 
-
 REST_AUTH = {
     'LOGIN_SERIALIZER': 'dj_rest_auth.serializers.LoginSerializer',
     'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.TokenSerializer',
@@ -198,6 +198,8 @@ REST_AUTH = {
     'JWT_AUTH_RETURN_EXPIRATION': False,
     'JWT_AUTH_COOKIE_USE_CSRF': False,
     'JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED': False,
+    'SEND_ACTIVATION_EMAIL': True,
+    'SEND_CONFIRMATION_EMAIL': True,
 }
 
 REST_USE_JWT = True
@@ -211,18 +213,11 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Blog API',
     'DESCRIPTION': 'API documentation for the Blog application',
     'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': True,
-    'SERVE_PUBLIC': True,
-    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
-    
-    # Schema settings
-    'COMPONENT_SPLIT_REQUEST': True,
-    'SCHEMA_PATH_PREFIX': r'/api/',
-    'SCHEMA_PATH_PREFIX_TRIM': True,
+    'SCHEMA_PATH_PREFIX': '/api',
+    'SCHEMA_PATH_PREFIX_TRIM': False,
     'SCHEMA_PATH_PREFIX_INCLUDES': ['/api/'],
     'SCHEMA_COERCE_PATH_PK_SUFFIX': True,
     'SCHEMA_COERCE_PATH_PK': True,
-    'SCHEMA_COERCE_PATH_PK_SUFFIX': True,
     'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.generators.SchemaGenerator',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     
@@ -242,6 +237,9 @@ SPECTACULAR_SETTINGS = {
         'displayOperationId': False,
         'showExtensions': True,
         'showCommonExtensions': True,
+        'url': '/api/schema/',
+        'validatorUrl': None,
+        'supportedSubmitMethods': ['get', 'post', 'put', 'delete', 'patch'],
     },
     
     # UI Distribution (use CDN)
@@ -355,12 +353,13 @@ SIMPLE_JWT = {
 }
 
 
-from django.urls import reverse_lazy
-
 # All auth
-LOGIN_URL = reverse_lazy('users:login')
-LOGOUT_REDIRECT_URL = reverse_lazy('users:login')
+LOGIN_URL = '/api/auth/dj_rest_auth/login/'
+LOGOUT_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
+ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 ACCOUNT_SIGNUP_FIELDS = {
     'email*': {
         'required': True,
@@ -375,6 +374,9 @@ ACCOUNT_SIGNUP_FIELDS = {
 }
 ACCOUNT_LOGIN_METHODS = ["email"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 
 # SocialAccount Auth
 SOCIALACCOUNT_PROVIDERS = {
@@ -405,13 +407,44 @@ SOCIALACCOUNT_PROVIDERS = {
 },
 }
     
-    
-# Email sending credentials
+
+# Email Configuration (Temporary debug mode)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Original SMTP backend
+
+# Mailtrap Configuration
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_PORT = os.environ.get('EMAIL_PORT', '')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
+# Email logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.core.mail': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# dj_rest_auth email settings
+OLD_PASSWORD_FIELD_ENABLED = True
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Your Site] '
 
 #Custom admin panel with django-jazzmin
 JAZZMIN_SETTINGS = {

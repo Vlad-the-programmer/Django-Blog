@@ -22,13 +22,7 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(api_version='v1'), name='schema'),
     
     # Swagger UI
-    path('api/schema/swagger-ui/', 
-        SpectacularSwaggerView.as_view(
-            url_name='schema',
-            url='/api/schema/',
-        ), 
-        name='swagger-ui'
-    ),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     
     # ReDoc UI
     path('api/schema/redoc/', 
@@ -39,8 +33,13 @@ urlpatterns = [
         name='redoc'
     ),
     
+    # Add a redirect from / to /api/schema/swagger-ui/
+    path('', RedirectView.as_view(url='/api/schema/swagger-ui/', permanent=False)),
+    
     # API Endpoints
-    path('api/auth/', include('users.urls')),
+    path('api/profile/', include('users.urls')),
+    path('api/auth/', include('socialAuth.urls')),
+    path('accounts/', include('allauth.urls')),
     path('api/posts/', include('posts.urls')),
     path('api/comments/', include('comments.urls')),
     path('api/category/', include('category.urls', namespace='category')),
