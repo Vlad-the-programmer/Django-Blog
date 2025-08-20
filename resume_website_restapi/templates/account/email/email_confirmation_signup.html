@@ -1,0 +1,20 @@
+{% extends "account/email/base_message.html" %}
+{% load i18n %}
+{% load account %}
+
+{% block content %}
+<p>{% blocktrans with site_name=site.name site_domain=site.domain %}
+    Thank you for signing up for {{ site_name }}!
+{% endblocktrans %}</p>
+
+<p>{% blocktrans %}
+    Please confirm your email address by clicking the following link:
+{% endblocktrans %}</p>
+
+<p><a href="{{ activate_url }}">{{ activate_url }}</a></p>
+
+<p>{% blocktrans with site_name=site.name site_domain=site.domain %}
+    Thank you from {{ site_name }}!
+    {{ site_domain }}
+{% endblocktrans %}</p>
+{% endblock %}

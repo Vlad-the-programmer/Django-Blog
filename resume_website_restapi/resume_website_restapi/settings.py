@@ -34,9 +34,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8001',
 ]
 
-SITE_ID = 2
-
-# Application definition
+SITE_ID = 1
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -57,6 +55,8 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'dj_rest_auth',
     'django_filters',
     'django_countries',
@@ -134,30 +134,23 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',  # Enable browsable API
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
-    ],
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.parsers.FileUploadParser',
     ],
     # Permissions
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
-    # Authentication
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
     ],
     # Filtering
     'DEFAULT_FILTER_BACKENDS': [
@@ -202,11 +195,14 @@ REST_AUTH = {
     'SEND_CONFIRMATION_EMAIL': True,
 }
 
-REST_USE_JWT = True
-# JWT_AUTH_RETURN_EXPIRATION = True
-# Cookies
-JWT_AUTH_COOKIE = 'blog-auth'
-JWT_AUTH_REFRESH_COOKIE = 'blog-refresh-token'
+# Use Token Authentication
+REST_USE_JWT = False
+
+# Add Token Authentication to default authentication classes
+REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
+    'rest_framework.authentication.TokenAuthentication',
+    'rest_framework.authentication.SessionAuthentication',
+]
 
 SPECTACULAR_SETTINGS = {
     # Basic settings
@@ -246,6 +242,24 @@ SPECTACULAR_SETTINGS = {
     'SWAGGER_UI_DIST': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest',
     'SWAGGER_UI_FAVICON_HREF': 'https://fastapi.tiangolo.com/img/favicon.png',
     'REDOC_DIST': 'https://cdn.jsdelivr.net/npm/redoc@latest',
+    
+    # Template settings
+    'SWAGGER_UI_LAYOUT': 'StandaloneLayout',
+    'SWAGGER_UI_CONFIG': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayRequestDuration': True,
+        'filter': True,
+    },
+    
+    # Add the missing script_url and other required template variables
+    'TEMPLATE_VARIABLES': {
+        'script_url': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-bundle.js',
+        'swagger_ui_css': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui.css',
+        'swagger_ui_bundle': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-bundle.js',
+        'swagger_ui_standalone': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-standalone-preset.js',
+        'favicon_href': 'https://fastapi.tiangolo.com/img/favicon.png',
+    },
     
     # Security
     'SECURITY_DEFINITIONS': {
@@ -320,6 +334,51 @@ AUTHENTICATION_BACKENDS = (
 
 
 # JWT Auth
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'users': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'allauth': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.core.mail': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -356,7 +415,6 @@ SIMPLE_JWT = {
 # All auth
 LOGIN_URL = '/api/auth/dj_rest_auth/login/'
 LOGOUT_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
-ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
@@ -377,74 +435,68 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/api/auth/dj_rest_auth/login/'
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+# Allauth settings
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_EMAIL_SUBJECT_PREFIX = 'Blog Rest API - '
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 
 # SocialAccount Auth
 SOCIALACCOUNT_PROVIDERS = {
-"github": {
-    "APP": {
-        "client_id": os.environ.get("GitHub_OAUTH_CLIENT_ID", ''),
-        "secret": os.environ.get("GitHub_OAUTH_SECRET", ''),
-    },
-},
-"google": {
-    "APP": {
-        "client_id": os.environ.get("Google_OAUTH_CLIENT_ID", ''),
-        "secret": os.environ.get("Google_OAUTH_SECRET", ''),
-    },
-     'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'offline',
-        }
-},
-"facebook": {
-    "APP": {
-        "client_id": os.environ.get("Facebook_OAUTH_CLIENT_ID", ''),
-        "secret": os.environ.get("Facebook_OAUTH_SECRET", ''),
-    },
-},
-}
-    
-
-# Email Configuration (Temporary debug mode)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Original SMTP backend
-
-# Mailtrap Configuration
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_PORT = os.environ.get('EMAIL_PORT', '')
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-
-# Email logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "github": {
+        "APP": {
+            "client_id": os.environ.get("GitHub_OAUTH_CLIENT_ID", ''),
+            "secret": os.environ.get("GitHub_OAUTH_SECRET", ''),
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+    "google": {
+        "APP": {
+            "client_id": os.environ.get("Google_OAUTH_CLIENT_ID", ''),
+            "secret": os.environ.get("Google_OAUTH_SECRET", ''),
         },
-        'django.core.mail': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+         'SCOPE': [
+                'profile',
+                'email',
+            ],
+            'AUTH_PARAMS': {
+                'access_type': 'offline',
+            }
+    },
+    "facebook": {
+        "APP": {
+            "client_id": os.environ.get("Facebook_OAUTH_CLIENT_ID", ''),
+            "secret": os.environ.get("Facebook_OAUTH_SECRET", ''),
         },
     },
 }
 
-# dj_rest_auth email settings
-OLD_PASSWORD_FIELD_ENABLED = True
-ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Your Site] '
+# Email Configuration
+# In development, print emails to console
+if DEBUG:
+    import logging
+    logger = logging.getLogger('django.core.mail')
+    logger.setLevel(logging.DEBUG)
+    if DEBUG:
+        # For development - use console backend
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        
+        # Set a proper domain for email links
+        SITE_DOMAIN = '127.0.0.1:8000'
+        DEFAULT_FROM_EMAIL = 'noreply@example.com'  # Using example.com for development
+        
+        # Print emails to console in development
+        EMAIL_FILE_PATH = None  # Don't save emails as files
+else:
+    # For production - SMTP configuration
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 2525))
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com')
+
+# Email subject prefix
+EMAIL_SUBJECT_PREFIX = 'Blog RestApi'
 
 #Custom admin panel with django-jazzmin
 JAZZMIN_SETTINGS = {

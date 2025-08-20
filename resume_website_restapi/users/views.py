@@ -1,16 +1,18 @@
 from django.db.models import Q
-from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import logout
 from django.shortcuts import get_object_or_404
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, parsers
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.request import Request
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 
 from .serializers import UserSerializer
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 Profile = get_user_model()
 
@@ -22,11 +24,12 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = Profile.objects.all()
     serializer_class = UserSerializer
+    parser_classes = (parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser)
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
-        elif self.action in ['signup', 'activate', 'reset_password', 'social_login']:
+        elif self.action in ['list']:
             return [AllowAny()]
         elif self.action in ['change_password']:
             return [IsAuthenticated()]
@@ -53,4 +56,7 @@ class UserViewSet(viewsets.ModelViewSet):
         self.perform_destroy(profile)
         logout(request)
         return Response({'detail': _('Profile deleted successfully.')}, status=status.HTTP_204_NO_CONTENT)
+
+
+
 

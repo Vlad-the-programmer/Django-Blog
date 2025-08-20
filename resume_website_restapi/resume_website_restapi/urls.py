@@ -39,7 +39,11 @@ urlpatterns = [
     # API Endpoints
     path('api/profile/', include('users.urls')),
     path('api/auth/', include('socialAuth.urls')),
+    
+    # Allauth URLs (for email verification)
     path('accounts/', include('allauth.urls')),
+    
+    # Other app URLs
     path('api/posts/', include('posts.urls')),
     path('api/comments/', include('comments.urls')),
     path('api/category/', include('category.urls', namespace='category')),

@@ -4,10 +4,9 @@ from .views import UserViewSet
 app_name = 'users'
 
 urlpatterns = [
-    # List and Create
+    # List users (admin only)
     path('', UserViewSet.as_view({
         'get': 'list',
-        'post': 'create'
     }), name='user-list'),
     
     # Retrieve and Update
@@ -21,4 +20,5 @@ urlpatterns = [
     path('<int:pk>/delete-profile/', 
          UserViewSet.as_view({'delete': 'delete_profile'}), 
          name='user-delete-profile'),
+
 ]

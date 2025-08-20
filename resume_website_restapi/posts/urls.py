@@ -54,23 +54,16 @@ class PostRouter(DefaultRouter):
     def get_urls(self):
         urls = super().get_urls()
         
-        # Add the slug-based detail view
-        slug_url = re_path(
-            r'^posts/(?P<slug>[\w-]+)/$',
-            PostDetailView.as_view(),
-            name='post-detail'
-        )
-        
         # Add the comments endpoint
         comments_url = re_path(
-            r'^posts/(?P<slug>[\w-]+)/comments/$',
+            r'(?P<slug>[\w-]+)/comments/$',
             PostViewSet.as_view({'get': 'comments', 'post': 'comments'}),
             name='post-comments'
         )
         
-        return [slug_url, comments_url] + urls
+        return [comments_url] + urls
 
 router = PostRouter()
-router.register(r'posts', PostViewSet, basename='post')
+router.register(r'', PostViewSet, basename='post')
 
 urlpatterns = router.urls

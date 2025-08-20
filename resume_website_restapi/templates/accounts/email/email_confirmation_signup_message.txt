@@ -1,11 +1,11 @@
-Hello {{ user.get_username }},
+{% load i18n %}{% autoescape off %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
+Hello from {{ site_name }}!
 
-You're receiving this email because you registered an account on {{ current_site.name }}.
+You're receiving this e-mail because you registered an account on {{ site_domain }}.
 
-Please confirm your email address by clicking the following link:
-{{ activate_url }}
+To confirm this is correct, go to {{ activate_url }}
 
 If you didn't create an account, please ignore this email.
 
-Thanks,
-The {{ current_site.name }} Team
+Thank you from {{ site_name }}!
+{{ site_domain }}{% endblocktrans %}{% endautoescape %}

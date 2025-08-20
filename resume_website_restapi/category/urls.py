@@ -6,7 +6,7 @@ app_name = 'category'
 
 
 router = DefaultRouter()
-router.register(r'categories', CategoryViewSet, basename='category')
+router.register(r'', CategoryViewSet, basename='category')
 
 urlpatterns = router.urls
 

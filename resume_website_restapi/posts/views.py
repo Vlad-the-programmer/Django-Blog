@@ -105,13 +105,13 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get', 'post'], permission_classes=[IsAuthenticatedOrReadOnly])
     def comments(self, request, pk=None, slug=None):
         """
-        Handle listing and creating comments for a specific post.
+        Handle listing and creating comments for a specific post with the provided slug.
         """
         post = self.get_object()
         
         if request.method == 'GET':
             # List all comments for the post
-            comments = Comment.objects.filter(post=post, is_active=True).select_related('author')
+            comments = Comment.active_comments.filter(post=post).select_related('author')
             serializer = CommentCRUDSerializer(comments, many=True, context={'request': request})
             return Response(serializer.data)
             

@@ -1,1 +1,1 @@
-Please Confirm Your Email Address
+{% load i18n %}{% autoescape off %}{% blocktrans %}Verify Your E-mail Address{% endblocktrans %}{% endautoescape %}
