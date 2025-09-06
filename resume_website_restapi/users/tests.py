@@ -1,126 +1,418 @@
-import os
-from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
-# DRF
+from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-from rest_framework.reverse import reverse, reverse_lazy
+from rest_framework.test import APITestCase, APIClient
+from django.contrib.auth import get_user_model
+
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+User = get_user_model()
+
+
+def create_test_image():
+    """Helper function to create a test image"""
+    image = Image.new('RGB', (100, 100), color='red')
+    image_file = BytesIO()
+    image.save(image_file, 'JPEG')
+    image_file.seek(0)
+    return SimpleUploadedFile(
+        'test_image.jpg',
+        image_file.getvalue(),
+        content_type='image/jpeg'
+    )
+
+
+class UserViewSetTestCase(APITestCase):
+    def setUp(self):
+        # Create admin user
+        self.admin = User.objects.create_superuser(
+            email='admin@example.com',
+            password='adminpass123',
+            first_name='Admin',
+            last_name='User'
+        )
+
+        # Create regular user
+        self.user = User.objects.create_user(
+            email='user@example.com',
+            password='testpass123',
+            first_name='Regular',
+            last_name='User'
+        )
+
+        # Create another user for testing
+        self.other_user = User.objects.create_user(
+            email='other@example.com',
+            password='otherpass123',
+            first_name='Other',
+            last_name='User'
+        )
+
+        # Get tokens
+        self.admin_token = Token.objects.create(user=self.admin)
+        self.user_token = Token.objects.create(user=self.user)
+
+        # API client setup
+        self.client = APIClient()
+
+        # URLs
+        self.user_list_url = reverse('user-list')
+        self.user_detail_url = lambda user_id: reverse('user-detail', args=[user_id])
+        self.user_change_password_url = lambda user_id: reverse('user-change-password', args=[user_id])
+        self.user_delete_profile_url = lambda user_id: reverse('user-delete-profile', args=[user_id])
+
+    def test_list_users_unauthenticated(self):
+        """Test that unauthenticated users can list users"""
+        response = self.client.get(self.user_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)  # 3 users in total
+
+    def test_list_users_authenticated(self):
+        """Test that authenticated users can list users"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(self.user_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)
+
+    def test_search_users(self):
+        """Test searching users by email, first_name, last_name"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(f"{self.user_list_url}?search=Regular")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['email'], 'user@example.com')
+
+    def test_retrieve_user_unauthenticated(self):
+        """Test retrieving user details without authentication"""
+        url = self.user_detail_url(self.user.id)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('email', response.data)
+        self.assertNotIn('password', response.data)
+
+    def test_update_user_unauthenticated(self):
+        """Test updating user without authentication should fail"""
+        url = self.user_detail_url(self.user.id)
+        data = {'first_name': 'Updated'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_update_own_profile(self):
+        """Test user can update their own profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.user.id)
+        data = {
+            'first_name': 'Updated',
+            'last_name': 'User',
+            'country': 'US'
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Updated')
+        self.assertEqual(self.user.country, 'US')
+
+    def test_update_other_user_profile(self):
+        """Test user cannot update another user's profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.other_user.id)
+        data = {'first_name': 'Hacked'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_update_any_user(self):
+        """Test admin can update any user's profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        url = self.user_detail_url(self.user.id)
+        data = {'first_name': 'AdminUpdated'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'AdminUpdated')
+
+    def test_upload_profile_picture(self):
+        """Test uploading a profile picture"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.user.id)
+
+        # Create a test image
+        image = create_test_image()
+
+        data = {
+            'featured_image': image
+        }
+        response = self.client.patch(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('featured_image', response.data)
+        self.assertTrue(response.data['featured_image'].endswith('.jpg'))
+
+    def test_delete_profile_own_account(self):
+        """Test user can delete their own account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_delete_profile_url(self.user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_cannot_delete_other_users_account(self):
+        """Test user cannot delete another user's account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_delete_profile_url(self.other_user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_delete_any_account(self):
+        """Test admin can delete any user account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        url = self.user_delete_profile_url(self.user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_filter_users_by_country(self):
+        """Test filtering users by country"""
+        # Set country for test user
+        self.user.country = 'US'
+        self.user.save()
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(f"{self.user_list_url}?country=US")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['email'], 'user@example.com')
+
+    def test_pagination(self):
+        """Test that user list is paginated"""
+        # Create additional users to test pagination
+        for i in range(15):
+            User.objects.create_user(
+                email=f'user{i}@example.com',
+                password=f'testpass{i}',
+                first_name=f'User{i}',
+                last_name='Test'
+            )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(self.user_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('count', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
+        self.assertIn('results', response.data)
+        self.assertEqual(len(response.data['results']), 10)  # Default page size
 from rest_framework.authtoken.models import Token
 
 from users.models import Profile
 
 
-class UserApiTestCase(APITestCase):
-    
-    def setUp(self) -> None:
-        self.register_url = reverse('users:register')
-        self.login_url = reverse('users:login')
-        self.logout_url = reverse('users:logout')
-        self.password_reset_url = reverse('users:password_reset')
-        
-        # Register user
-        self.user_data = {
-                      "email": "vlad2@gmail.com",
-                      "password": "student123",
-                      "password2": "student123",
-                      "country": "poland",
-                      "gender": "male",
-                      "first_name": "Vladyslav",
-                      "last_name": "Klymchuk",
-                    }
+def create_test_image():
+    """Helper function to create a test image"""
+    image = Image.new('RGB', (100, 100), color='red')
+    image_file = BytesIO()
+    image.save(image_file, 'JPEG')
+    image_file.seek(0)
+    return SimpleUploadedFile(
+        'test_image.jpg',
+        image_file.getvalue(),
+        content_type='image/jpeg'
+    )
 
-        response = self.client.post(self.register_url, self.user_data,
-                                    format='json').data
-        
-        self.user = Profile.objects.get(email=response["email"])
-        
-        print('Register ', self.user)
-        print('Profiles ', Profile.objects.all())
-        
-        # Get tokens 
-        self.confirm_token = default_token_generator.make_token(self.user)
-        # self.token, created = Token.objects.get_or_create(user=self.user)
-        login_data = {"email": self.user.email, "password": "student123"}
-        
-        self.token = self.client.post(reverse('users:token_obtain_pair'),
-                                      login_data).data
-        print('Token ', self.token)
-        
-        # Headers
-        self.headers = {'Authorization': f'Bearer {self.token}'}
-        
-        
-        data = {"token": self.confirm_token, 
-                "uuid": self.user.id}
-        
-        self.activation_url = reverse('users:activate', kwargs=data)
-        self.password_change_url = reverse('users:password_change', kwargs=data)
-        
-        # google_access_token = self.client.post(
-        #             os.environ.get("Token_Uri"),
-        #             data = {
-        #                     'client_id': os.environ.get("Google_OAUTH_CLIENT_ID", ''),
-        #             },
-        #         )
-        # print('Google token ', google_access_token.data)
-        # response = self.client.post(
-        #             reverse_lazy('users:google_login'), 
-        #             data = {
-        #                     'code': os.environ.get("Google_OAUTH_CLIENT_ID", ''),
-        #             },
-        #         )
-        # print(response.data)
-        
-        return super().setUp()
-    
-    
-    def test_register_user(self):
-    #     response = self.client.post(self.register_url, self.user_data, format='json')
-    #     print('Reg ', response.data)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.user.email, self.user_data["email"])
-        
-        
-    def test_activate_account(self):
-        
-        response = self.client.post(self.activation_url, format='json',
-                                    headers=self.headers)
-        
+
+class UserApiTestCase(APITestCase):
+
+
+    def setUp(self):
+        # Create admin user
+        self.admin = Profile.objects.create_superuser(
+            email='admin@example.com',
+            password='adminpass123',
+            first_name='Admin',
+            last_name='User'
+        )
+
+        # Create regular user
+        self.user = Profile.objects.create_user(
+            email='user@example.com',
+            password='testpass123',
+            first_name='Regular',
+            last_name='User'
+        )
+
+        # Create another user for testing
+        self.other_user = Profile.objects.create_user(
+            email='other@example.com',
+            password='otherpass123',
+            first_name='Other',
+            last_name='User'
+        )
+
+        # Get tokens
+        self.admin_token = Token.objects.create(user=self.admin)
+        self.user_token = Token.objects.create(user=self.user)
+
+        # API client setup
+        self.client = APIClient()
+
+        # URLs
+        self.user_list_url = reverse('user-list')
+        self.user_detail_url = lambda user_id: reverse('user-detail', args=[user_id])
+        self.user_change_password_url = lambda user_id: reverse('user-change-password', args=[user_id])
+        self.user_delete_profile_url = lambda user_id: reverse('user-delete-profile', args=[user_id])
+
+
+    def test_list_users_unauthenticated(self):
+        """Test that unauthenticated users can list users"""
+        response = self.client.get(self.user_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        
-    def test_login_user(self):
-        # data = {"email": self.user.email, "password": "student123"}
-        # response = self.client.post(self.login_url, login_data, format='json')
-        self.client.force_login(self.user)
-        self.assertTrue(self.user.is_authenticated)
-        
-        
-    def test_password_reset(self):
-        data = {"email": self.user.email}
-        response = self.client.post(self.password_reset_url, data)
-        
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        
-        
-    def test_password_change(self):
-        data = {"password": "student123", "password2": "student123"}
-        user = Profile.objects.get(email=self.user.email)
-        
-        response = self.client.patch(self.password_change_url, data, format='json')
-        
+        self.assertEqual(len(response.data['results']), 3)  # 3 users in total
+
+
+    def test_list_users_authenticated(self):
+        """Test that authenticated users can list users"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(self.user_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(user.check_password(data['password']))
-        
-        
-    def test_github_auth(self):
-        response = self.client.post(reverse_lazy('users:github_login'), self.headers)
-        
+        self.assertEqual(len(response.data['results']), 3)
+
+
+    def test_search_users(self):
+        """Test searching users by email, first_name, last_name"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(f"{self.user_list_url}?search=Regular")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-    def test_google_auth(self):
-        response = self.client.post(reverse_lazy('users:google_login'), self.headers)
-        
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['email'], 'user@example.com')
+
+
+    def test_retrieve_user_unauthenticated(self):
+        """Test retrieving user details without authentication"""
+        url = self.user_detail_url(self.user.id)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    
+        self.assertIn('email', response.data)
+        self.assertNotIn('password', response.data)
+
+
+    def test_update_user_unauthenticated(self):
+        """Test updating user without authentication should fail"""
+        url = self.user_detail_url(self.user.id)
+        data = {'first_name': 'Updated'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    def test_update_own_profile(self):
+        """Test user can update their own profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.user.id)
+        data = {
+            'first_name': 'Updated',
+            'last_name': 'User',
+            'country': 'US'
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Updated')
+        self.assertEqual(self.user.country, 'US')
+
+
+    def test_update_other_user_profile(self):
+        """Test user cannot update another user's profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.other_user.id)
+        data = {'first_name': 'Hacked'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_admin_can_update_any_user(self):
+        """Test admin can update any user's profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        url = self.user_detail_url(self.user.id)
+        data = {'first_name': 'AdminUpdated'}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'AdminUpdated')
+
+
+    def test_upload_profile_picture(self):
+        """Test uploading a profile picture"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_detail_url(self.user.id)
+
+        # Create a test image
+        image = create_test_image()
+
+        data = {
+            'featured_image': image
+        }
+        response = self.client.patch(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('featured_image', response.data)
+        self.assertTrue(response.data['featured_image'].endswith('.jpg'))
+
+
+    def test_delete_profile_own_account(self):
+        """Test user can delete their own account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_delete_profile_url(self.user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Profile.objects.filter(id=self.user.id).exists())
+
+
+    def test_cannot_delete_other_users_account(self):
+        """Test user cannot delete another user's account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        url = self.user_delete_profile_url(self.other_user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_admin_can_delete_any_account(self):
+        """Test admin can delete any user account"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        url = self.user_delete_profile_url(self.user.id)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Profile.objects.filter(id=self.user.id).exists())
+
+
+    def test_filter_users_by_country(self):
+        """Test filtering users by country"""
+        # Set country for test user
+        self.user.country = 'US'
+        self.user.save()
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(f"{self.user_list_url}?country=US")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['email'], 'user@example.com')
+
+
+    def test_pagination(self):
+        """Test that user list is paginated"""
+        # Create additional users to test pagination
+        for i in range(15):
+            Profile.objects.create_user(
+                email=f'user{i}@example.com',
+                password=f'testpass{i}',
+                first_name=f'User{i}',
+                last_name='Test'
+            )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user_token.key}')
+        response = self.client.get(self.user_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('count', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
+        self.assertIn('results', response.data)
+        self.assertEqual(len(response.data['results']), 10)  # Default page size
+
+
         

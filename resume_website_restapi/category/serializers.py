@@ -61,6 +61,7 @@ class CategoryCRUDSerializer(serializers.ModelSerializer):
         max_length=100,
         allow_blank=True,
         required=False,
+        read_only=True,
         validators=[
             UniqueValidator(
                 queryset=Category.objects.all(),
@@ -75,7 +76,7 @@ class CategoryCRUDSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'slug', 'date_created', 'date_updated', 'is_active'
         )
-        read_only_fields = ('id', 'date_created', 'date_updated', 'is_active')
+        read_only_fields = ('id', 'slug', 'date_created', 'date_updated', 'is_active')
         extra_kwargs = {
             'title': {'help_text': _('The name of the category')},
         }
@@ -106,25 +107,3 @@ class CategoryCRUDSerializer(serializers.ModelSerializer):
                 })
                 
         return attrs
-    
-    def create(self, validated_data):
-        """
-        Create a new category instance.
-        Automatically generates a slug from the title if not provided.
-        """
-        # Generate slug from title if not provided
-        if not validated_data.get('slug') and validated_data.get('title'):
-            validated_data['slug'] = slugify(validated_data['title'])
-            
-        return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        """
-        Update a category instance.
-        Updates the slug if the title was changed and no slug was provided.
-        """
-        # If title is being updated and no slug was provided, update the slug
-        if 'title' in validated_data and not validated_data.get('slug'):
-            validated_data['slug'] = slugify(validated_data['title'])
-            
-        return super().update(instance, validated_data)

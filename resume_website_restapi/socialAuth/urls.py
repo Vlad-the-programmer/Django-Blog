@@ -11,7 +11,7 @@ urlpatterns = [
     
     # Registration and email verification endpoints
     path('dj_rest_auth/registration/', include([
-        path('', CustomRegisterView.as_view(), name='rest_register'),
+        path('', CustomRegisterView.as_view(), name='register'),
         path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
         path('verify-email/confirm/<str:uidb64>/<str:token>/', VerifyEmailView.as_view(), name='verify-email-confirm'),
         path('resend-email/', ResendEmailVerificationView.as_view(), name='resend-email'),

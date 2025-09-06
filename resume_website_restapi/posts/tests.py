@@ -1,4 +1,5 @@
 from django.contrib.auth.tokens import default_token_generator
+from django.utils.text import slugify
 # DRF
 from rest_framework.test import APITestCase
 from rest_framework.reverse import reverse
@@ -89,7 +90,7 @@ class PostApiTestCase(APITestCase):
         response = self.client.post(self.post_update_delete, data, self.headers)
     
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['slug'], data['title'])
+        self.assertEqual(response.data['slug'], slugify(data['title']))
         
         
     def test_destroy_post(self):

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from common.models import CommonModel
@@ -12,6 +13,17 @@ class Category(CommonModel):
     
     def __str__(self):
         return self.slug or self.title
+
+    def save(
+        self,
+        force_insert = ...,
+        force_update = ...,
+        using = ...,
+        update_fields = ...,
+    ):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(force_insert, force_update, using, update_fields)
     
     class Meta:
         verbose_name = _("Category")

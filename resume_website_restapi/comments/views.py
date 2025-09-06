@@ -1,21 +1,12 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 
 from .models import Comment
 from .serializers import CommentCRUDSerializer
 
 
 @extend_schema(tags=['Comments'])
-@extend_schema(parameters=[
-    OpenApiParameter(
-        name='slug',
-        type=str,
-        location=OpenApiParameter.PATH,
-        description='Slug of the comment',
-        required=True
-    ),
-])
 class CommentViewSet(viewsets.ModelViewSet):
     """
     Handles listing, creating, retrieving, updating, and deleting comments.

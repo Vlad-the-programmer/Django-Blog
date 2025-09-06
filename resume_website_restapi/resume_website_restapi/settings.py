@@ -164,7 +164,7 @@ REST_FRAMEWORK = {
 }
 
 REST_AUTH = {
-    'LOGIN_SERIALIZER': 'dj_rest_auth.serializers.LoginSerializer',
+    'LOGIN_SERIALIZER': 'users.serializers.CustomLoginSerializer',
     'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.TokenSerializer',
     'JWT_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
     'JWT_SERIALIZER_WITH_EXPIRATION': 'dj_rest_auth.serializers.JWTSerializerWithExpiration',
@@ -475,16 +475,16 @@ if DEBUG:
     import logging
     logger = logging.getLogger('django.core.mail')
     logger.setLevel(logging.DEBUG)
-    if DEBUG:
-        # For development - use console backend
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-        
-        # Set a proper domain for email links
-        SITE_DOMAIN = '127.0.0.1:8000'
-        DEFAULT_FROM_EMAIL = 'noreply@example.com'  # Using example.com for development
-        
-        # Print emails to console in development
-        EMAIL_FILE_PATH = None  # Don't save emails as files
+    # For development - use console backend
+    # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+    # Set a proper domain for email links
+    SITE_DOMAIN = '127.0.0.1:8000'
+    DEFAULT_FROM_EMAIL = 'noreply@example.com'  # Using example.com for development
+
+    EMAIL_FILE_PATH = None  # Don't save emails as files
 else:
     # For production - SMTP configuration
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

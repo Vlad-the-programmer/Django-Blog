@@ -14,6 +14,7 @@ from dj_rest_auth.serializers import PasswordResetSerializer as DefaultPasswordR
 from dj_rest_auth.serializers import PasswordResetConfirmSerializer as DefaultPasswordResetConfirmSerializer
 from dj_rest_auth.registration.serializers import RegisterSerializer as DefaultRegisterSerializer
 from dj_rest_auth.serializers import UserDetailsSerializer as DefaultUserDetailsSerializer
+from dj_rest_auth.serializers import LoginSerializer as DefaultUserLoginSerializer
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.core.validators import FileExtensionValidator
 from django.utils.translation import gettext_lazy as _
@@ -21,7 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from common.validators import FileSizeValidator as CustomFileSizeValidator
 # Local
 from .models import Gender
-from .exceptions import NotOwner, UserAlreadyExists, InvalidPasswordFormat, WeakPasswordError
+from .exceptions import NotOwner, UserAlreadyExists, WeakPasswordError
 
 # Email handler
 from base_utils.emails_handler import send_confirmation_email
@@ -57,6 +58,11 @@ class PasswordField(serializers.CharField):
             raise serializers.ValidationError(_('Password must contain at least one uppercase letter.'))
         if not any(char.islower() for char in value):
             raise serializers.ValidationError(_('Password must contain at least one lowercase letter.'))
+
+class CustomLoginSerializer(DefaultUserLoginSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('username', None) # exclude the username field
 
 @extend_schema_serializer(
     exclude_fields=['is_staff', 'is_active'],
@@ -194,7 +200,6 @@ class UserSerializer(serializers.ModelSerializer):
             instance.featured_image.delete(save=False)
         
         return super().update(instance, validated_data)
-
 
 @extend_schema_serializer(
     exclude_fields=['is_staff', 'is_active'],
