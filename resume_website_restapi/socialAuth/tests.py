@@ -1,14 +1,14 @@
-import os
 from unittest.mock import patch
-from django.conf import settings
+
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from users.models import Profile
+
+Profile = get_user_model()
 
 
 class SocialAuthTestCase(APITestCase):
